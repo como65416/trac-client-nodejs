@@ -1,0 +1,14 @@
+{
+  "name": "trac-client-nodejs",
+  "version": "1.0.0",
+  "description": "a library used for control `The Trac Project` ticket",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "comoco",
+  "license": "MIT",
+  "dependencies": {
+    "request": "^2.87.0"
+  }
+}
