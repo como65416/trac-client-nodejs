@@ -1,5 +1,5 @@
 
-var request = require('request');
+var request_promise = require('request-promise');
 
 class TracClientNodejs {
 
@@ -9,7 +9,7 @@ class TracClientNodejs {
     this.password = password;
   }
 
-  getUserTicketIds(username, statuses, limit, callback)
+  getUserTicketIds(username, statuses, limit)
   {
     let query_params = [];
     query_params.push("owner=" + username);
@@ -18,20 +18,15 @@ class TracClientNodejs {
       query_params.push("status=" + status);
     }
 
-    this._callApi("ticket.query", [
+    return this._callApi("ticket.query", [
       query_params.join('&')
-    ], callback);
+    ]);
   }
 
-  getTicketInfo(ticket_id, callback) {
-    this._callApi('ticket.get', [
+  getTicketInfo(ticket_id) {
+    return this._callApi('ticket.get', [
       ticket_id
-    ], (response, error) => {
-      if (error !== null) {
-        callback(response, error);
-        return;
-      }
-
+    ]).then((response) => {
       let ticket_info = {};
       ticket_info.time_created = response[1].__jsonclass__[1]
       ticket_info.time_changed = response[2].__jsonclass__[1];
@@ -42,11 +37,11 @@ class TracClientNodejs {
         delete response[3].time;
       }
       ticket_info = {...ticket_info, ...response[3]};
-      callback(ticket_info, error);
+      return ticket_info;
     });
   }
 
-  _callApi(method_name, params, callback) {
+  _callApi(method_name, params) {
     let options = {
       uri: this.api_url,
       method: "POST",
@@ -62,20 +57,20 @@ class TracClientNodejs {
       }
     }
 
-    request(options, (error, response, body) => {
-      let err = null;
-      if (response.statusCode == 401) {
-        err = 'username or password not valid';
-      } else if (response.statusCode != 200) {
-        err = 'call rpc api fail (status code : ' + response.statusCode + ')';
-      } else if (typeof body.error !== 'undefined' && body.error !== null) {
-        err = body.error.message;
-      }
-
-      let result = (typeof body.result !== 'undefined') ? body.result : null ;
-      callback(result, err);
+    return request_promise(options).then ((response) => {
+        if (typeof response.error !== 'undefined' && response.error !== null) {
+            throw response.error.message;
+        };
+        return response.result;
+    }).catch((err) => {
+        if (typeof err.statusCode !== 'undefined' && err.statusCode == 401) {
+            throw 'username or password not valid';
+        } else if (typeof err.statusCode !== 'undefined') {
+            throw 'call rpc api fail (status code : ' + err.statusCode + ')';
+        }
+        throw err;
     });
   }
-
 }
+
 module.exports = TracClientNodejs;
